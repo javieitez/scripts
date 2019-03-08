@@ -25,3 +25,5 @@ TEMPFILE='/tmp/'$RANDOM'.tmp'
 $PLUGINSFOLDER/check_service -s $SERVICENAME > $TEMPFILE 
 
 $PLUGINSFOLDER/check_file_content.pl -f $TEMPFILE -i $SERVICESTRING
+
+rm $TEMPFILE
