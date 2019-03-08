@@ -21,9 +21,25 @@ PLUGINSFOLDER='/usr/lib64/nagios/plugins'
 #Generate a random TEMP file
 TEMPFILE='/tmp/'$RANDOM'.tmp'
 
-
+#save service status to a temp file
 $PLUGINSFOLDER/check_service -s $SERVICENAME > $TEMPFILE 
 
-$PLUGINSFOLDER/check_file_content.pl -f $TEMPFILE -i $SERVICESTRING
+#search for the string in tmp file
+$PLUGINSFOLDER/check_file_content.pl -f $TEMPFILE -i $SERVICESTRING > /dev/null
+#capture the exit code
+LASTEXITCODE=$? 
 
 rm $TEMPFILE
+
+if [ $LASTEXITCODE == 0 ] 
+	then
+		# No alarms? Ok, everything is right.
+		echo "OK - $SERVICENAME is $SERVICESTRING"
+		exit $STATE_OK
+	else
+		echo "CRITICAL - $SERVICENAME is in a state different than $SERVICESTRING"
+		exit $STATE_CRITICAL
+fi
+
+
+
