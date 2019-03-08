@@ -35,10 +35,10 @@ if [ $LASTEXITCODE == 0 ]
 	then
 		# No alarms? Ok, everything is right.
 		echo "OK - $SERVICENAME is $SERVICESTRING"
-		exit $STATE_OK
+		exit 0
 	else
 		echo "CRITICAL - $SERVICENAME is in a state different than $SERVICESTRING"
-		exit $STATE_CRITICAL
+		exit 2
 fi
 
 
