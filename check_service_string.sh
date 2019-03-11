@@ -14,7 +14,17 @@
 
 #get the service and string to search from the command arguments
 SERVICENAME=$1
-SERVICESTRING=$2
+UPSTRING=$2
+DOWNSTRING=$3
+
+if [ $1 == '-h' ]
+	then
+		echo "Usage:  check check_service_string service STRING1 STRING2"
+		echo "The first parameter is the service UP status string, the second one is the service down"
+		echo ""
+		echo "Example: check check_service_string nrpe running dead"
+		exit 3
+fi
 
 #set the NRPE plugins folder
 PLUGINSFOLDER='/usr/lib64/nagios/plugins'
@@ -25,7 +35,7 @@ TEMPFILE='/tmp/'$RANDOM'.tmp'
 $PLUGINSFOLDER/check_service -s $SERVICENAME > $TEMPFILE 
 
 #search for the string in tmp file
-$PLUGINSFOLDER/check_file_content.pl -f $TEMPFILE -i $SERVICESTRING > /dev/null
+$PLUGINSFOLDER/check_file_content.pl -f $TEMPFILE -i $UPSTRING -e $DOWNSTRING > /dev/null
 #capture the exit code
 LASTEXITCODE=$? 
 
@@ -34,12 +44,9 @@ rm $TEMPFILE
 if [ $LASTEXITCODE == 0 ] 
 	then
 		# No alarms? Ok, everything is right.
-		echo "OK - $SERVICENAME is $SERVICESTRING"
+		echo "OK - $SERVICENAME is $UPSTRING"
 		exit 0
 	else
-		echo "CRITICAL - $SERVICENAME is in a state different than $SERVICESTRING"
+		echo "CRITICAL - $SERVICENAME is $DOWNSTRING"
 		exit 2
 fi
-
-
-
