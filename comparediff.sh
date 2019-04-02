@@ -14,7 +14,7 @@ for i in $(cat $1); do
 	LASTEXITCODE=$? 
 	if [ $LASTEXITCODE == 0 ] 
 	then
-		# line existis in file B
+		# line exists in file B
 		echo "$i exists in $2"
 	else
 		echo "$i" >> $3
