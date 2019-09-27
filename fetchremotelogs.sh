@@ -11,9 +11,10 @@
 # Author: JA Vieitez
 
 SERVERPREFIX=BACKEND-
+SERVERRANGE={1..15}
 
 # Remove old Temp files and fetch latest versions
-for SERVERNUMBER in 03 04 05 06 07 08 09 10 11 12 13 14 15 16
+for SERVERNUMBER in SERVERRANGE
 	do
 		#clear previous file if it exists
 		rm /tmp/$SERVERPREFIX$SERVERNUMBER.txt
@@ -21,7 +22,7 @@ for SERVERNUMBER in 03 04 05 06 07 08 09 10 11 12 13 14 15 16
 	done
 
 # parse the logs and count the repetitions
-for SERVERNUMBER in 03 04 05 06 07 08 09 10 11 12 13 14 15 16
+for SERVERNUMBER in SERVERRANGE
 	do		
 		echo Number of ocurrences for $SERVERNUMBER > /var/www/logfiles/$SERVERPREFIX$SERVERNUMBER.txt
 		#Search for a string, count the number of ocurrences with wc and save it to a local path. The resulting file can be parsed by a Nagios check that can trigger an alarm
