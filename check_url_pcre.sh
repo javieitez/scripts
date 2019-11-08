@@ -2,7 +2,8 @@
 
 # Author: JA Vieitez (github.com/javieitez)
 
-# Quick and dirty script to find a Perl Compatible Regex in the output of a URL. Unlike the bundled Regex functionality of check_http, this one supports multiline expressions :) 
+# Quick and dirty script to find a Perl Compatible Regex in the output of a URL. 
+# Unlike the bundled Regex functionality of check_http, this one supports multiline expressions :) 
 
 
 # help requested or invalid parameters
