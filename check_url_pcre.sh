@@ -43,15 +43,10 @@ if [ "$4" == "--http" ]
 fi
 
 #############################################################
-
-echo "fetching $PROTOCOL://$1$2..."
-
 curl --silent "$PROTOCOL://$1$2" | pcregrep -M "$3"
 
 #capture the exit code
 LASTEXITCODE=$?
-
-echo "$LASTEXITCODE"
 
 if [ "$LASTEXITCODE" == 0 ] 
 	then
