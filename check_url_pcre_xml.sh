@@ -56,9 +56,12 @@ fi
 if [ $RETURNEDDIGIT -le $EXPECTEDDIGIT ]
 	then
 		echo "OK - Expected $EXPECTEDDIGIT, returned $RETURNEDDIGIT - RegExp found in $PROTOCOL://$1$2"
+		echo ""
+		echo "$XMLresponse" #Print the XML found for debbugging
 		exit 0
 	else
+		echo "CRITICAL - Expected $EXPECTEDDIGIT, returned $RETURNEDDIGIT - RegExp found in $PROTOCOL://$1$2"
+		echo ""
 		echo "$XMLresponse" #Print the XML found for debbugging
-		echo "CRITICAL - Expected $EXPECTEDDIGIT, returned $RETURNEDDIGIT - RegExp found in IN $PROTOCOL://$1$2"
 		exit 2
 fi
