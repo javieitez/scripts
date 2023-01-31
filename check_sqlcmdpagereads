@@ -28,9 +28,8 @@ if [ $1 == '-h' ]
 		exit 3
 fi
 
-echo "parameters are $1 $2 $3 $4 $5 $6 $7 $8 $9" 
-#echo "SQL Query:" 
-#echo $MSSQLQUERY 
+#just for debug
+#echo "parameters are $1 $2 $3 $4 $5 $6 $7 $8 $9" 
 
 # just pass all the parameters with the query at the end
 SQLOUTPUT=$($SQLCMD_PATH/sqlcmd $1 "$2" $3 "$4" $5 "$6" $7 "$8" -Q "$MSSQLQUERY")
@@ -43,7 +42,7 @@ PAGEREADS=$(echo "$SQLOUTPUT" | grep "Page reads" | awk '{print $3}')
 if [ $LASTEXITCODE == 0 ] 
 	then
 		# Connection successful
-		echo "successfully connected to $8"
+		echo "Connected to $8"
 		echo "$PAGEREADS Page Reads"
 	else
 		echo "CRITICAL - could no connect to $8"
