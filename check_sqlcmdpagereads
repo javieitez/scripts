@@ -18,13 +18,13 @@ WHERE
     object_name LIKE '%Buffer Manager%'
     AND counter_name IN ('Page reads/sec', 'Page writes/sec');"
 #############  #############  ############ 
-PAGEREADSLIMIT='750000'
+MyLIMIT='750000'
 
 if [ $1 == '-h' ]
 	then
 		echo "Usage:  check_sqlcmd.sh -S SERVER -d DATABASE -U USER -P PASSWORD"
 		echo ""
-		echo "Example: check_sqlcmd.sh -S 10.10.10.10 -d MYDATABASE -U sa -P 1234 -Q \"SELECT name FROM sys.databases\""
+		echo "Example: check_sqlcmd.sh -S 10.10.10.10 -d MYDATABASE -U sa -P 1234"
 		exit 3
 fi
 
@@ -49,11 +49,11 @@ if [ $LASTEXITCODE == 0 ]
 		exit 2
 fi
 
-if  [[ "$PAGEREADS" -ge "$PAGEREADSLIMIT" ]]
+if  [[ "$PAGEREADS" -ge "$MyLIMIT" ]]
 	then
-		echo "CRITICAL - Above the limit of $PAGEREADSLIMIT Page Reads"
+		echo "CRITICAL - Above the limit of $MyLIMIT Page Reads"
 		exit 2
 	else
-		echo "OK - Below the limit of $PAGEREADSLIMIT Page Reads"
+		echo "OK - Below the limit of $MyLIMIT Page Reads"
 		exit 0
 fi 
