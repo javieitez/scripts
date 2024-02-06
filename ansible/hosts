@@ -1,0 +1,10 @@
+---
+
+all:
+  vars:
+    ansible_user: #your_admin_user
+    my_filerepo: "http://x.x.x.x"
+    my_ansible: "x.x.x.x"
+    my_filerepo_local: "/var/www/html"
+    my_manager: "Not Set" 
+    my_cloud: "VMWare Vcenter"
