@@ -1,0 +1,113 @@
+########################################################################################################
+#     Install OCS Agent
+#  author: JA Vieitez
+#  status: production
+#
+#  Install Agent, configure it and check connectivity with the OCS server 
+#
+#
+#   
+########################################################################################################
+---
+- hosts: all
+  gather_facts: yes
+  become: true
+
+  vars:
+    #The address of your running OCS server
+    my_ocsinventoryserver: "x.x.x.x" 
+
+  tasks:
+  - name: EPEL Requirement (RPM)
+    yum:
+      name: "epel-release" 
+      state: present
+    # Only apply if Redhat > 7, to prevent RHEL yum bug 
+    when: (ansible_pkg_mgr == "yum" or ansible_pkg_mgr == "dnf")  and (ansible_distribution_major_version |int > 6)
+
+  - name: Install OCS Inventory Agent (RPM)
+    yum:
+      name: "ocsinventory-agent" 
+      state: present
+    # Only apply if Redhat > 7, to prevent RHEL yum bug 
+    when: (ansible_pkg_mgr == "yum" or ansible_pkg_mgr == "dnf")  and (ansible_distribution_major_version |int > 6)
+
+  - name: Install OCS Inventory Agent (DEB)
+    apt:
+      name: "ocsinventory-agent" 
+      state: present
+      update_cache: false
+    when: ansible_pkg_mgr == "apt"
+
+  - name: Server entry in /etc/ocsinventory/ocsinventory-agent.cfg
+    lineinfile:
+      path: /etc/ocsinventory/ocsinventory-agent.cfg
+      regexp: "(server =|server=)"
+      line: "server = http://{{ my_ocsinventoryserver }}/ocsinventory"
+
+  - name: Comment local in /etc/ocsinventory/ocsinventory-agent.cfg
+    lineinfile:
+      path: /etc/ocsinventory/ocsinventory-agent.cfg
+      regexp: "(local =|local=)"
+      line: "#local = /var/lib/ocsinventory-agent"
+
+  - name: copy .service file on Redhat systems
+    copy:
+      src: "{{ my_filerepo_local }}/ocsinventory/ocsinventory-agent.serviceredhat"
+      dest: /usr/lib/systemd/system/ocsinventory-agent.service
+      owner: root
+      group: root
+      mode: '0644'
+    when: ansible_os_family == "RedHat" or ansible_os_family == "Rocky"
+
+  - name: copy .service file on Debian systems
+    copy:
+      src: "{{ my_filerepo_local }}/ocsinventory/ocsinventory-agent.servicedebian"
+      dest: /usr/lib/systemd/system/ocsinventory-agent.service
+      owner: root
+      group: root
+      mode: '0644'
+    when: ansible_os_family == "Debian" or ansible_os_family == "Suse"
+
+  - name: copy .timer file 
+    copy:
+      src: "{{ my_filerepo_local }}/ocsinventory/ocsinventory-agent.timer"
+      dest: /lib/systemd/system/ocsinventory-agent.timer
+      owner: root
+      group: root
+      mode: '0644'
+
+
+  - name: SystemD service enabled
+    service:
+      name: ocsinventory-agent.service
+      state: started
+      enabled: true
+    when: ansible_service_mgr == "systemd"
+
+  - name: SystemD Timer enabled and running (RHEL)
+    service:
+      name: ocsinventory-agent-daily.timer
+      state: started
+      enabled: true
+    when: ansible_os_family == "RedHat" or ansible_os_family == "Rocky"
+
+  - name: SystemD Timer enabled and running (Debian)
+    service:
+      name: ocsinventory-agent.timer
+      state: started
+      enabled: true
+    when: ansible_os_family == "Debian" or ansible_os_family == "Suse"
+
+  - name: Access to OCS server from the current host
+    wait_for:
+      host: "{{ my_ocsinventoryserver }}"
+      port: "{{ item }}"
+      state: started         # Port should be open
+      delay: 0               # No wait before first check (sec)
+      timeout: 3             # Stop checking after timeout (sec)
+    ignore_errors: yes
+    with_list:
+      - 80
+      #- 443
+

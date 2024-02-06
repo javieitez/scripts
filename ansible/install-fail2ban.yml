@@ -1,0 +1,38 @@
+---
+- hosts: all
+  gather_facts: yes
+  become: true
+
+  handlers:
+  - name: Restart fail2ban
+    systemd: 
+      name: fail2ban
+      state: restarted
+
+  tasks:
+  - name: Install fail2ban (RPM)
+    yum:
+      name: fail2ban 
+      state: present
+      disable_gpg_check: true
+    # Only apply if Redhat > 7, to prevent RHEL yum bug 
+    when: (ansible_pkg_mgr == "yum" or ansible_pkg_mgr == "dnf")  and (ansible_distribution_major_version |int > 6)
+
+  - name: Install fail2ban (DEB)
+    apt:
+      name: fail2ban
+      state: present
+      update_cache: false
+    when: ansible_pkg_mgr == "apt"
+
+  - name: Upload jail.local
+    copy:
+      src: "{{ cgi_filerepo_local }}/fail2ban/jail.local"
+      dest: "/etc/fail2ban"
+    notify: "Restart fail2ban"
+
+  - name: fail2ban enabled and started
+    systemd: 
+      name: fail2ban
+      enabled: true
+      state: started

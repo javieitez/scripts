@@ -1,0 +1,20 @@
+---
+- hosts: all
+  become: true
+  handlers:
+  - import_tasks: handlers/sab1/main.yml
+
+  tasks:
+  - name: Edit sshd_config
+    lineinfile: 
+      firstmatch: True
+      path: /etc/ssh/sshd_config
+      search_string: "{{ item.key }}" 
+      line: "{{ item.value }}"
+    notify: Reload sshd
+    with_dict:
+      IgnoreRhosts: IgnoreRhosts yes
+      Protocol: Protocol 2
+      PermitEmptyPasswords: PermitEmptyPasswords no
+      PermitRootLogin: PermitRootLogin no
+      MaxAuthTries: MaxAuthTries 3
