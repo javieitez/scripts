@@ -1,3 +1,10 @@
+############################################################################################################
+# 
+# Easily Deploy Fail2Ban to all your exposed servers
+#
+# https://github.com/fail2ban/fail2ban
+#
+############################################################################################################
 ---
 - hosts: all
   gather_facts: yes
@@ -27,7 +34,7 @@
 
   - name: Upload jail.local
     copy:
-      src: "{{ cgi_filerepo_local }}/fail2ban/jail.local"
+      src: "{{ my_filerepo_local }}/fail2ban/jail.local"
       dest: "/etc/fail2ban"
     notify: "Restart fail2ban"
 
