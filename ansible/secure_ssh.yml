@@ -1,3 +1,10 @@
+########################################################################
+#
+# Easily set your /etc/ssh/sshd_config parameters
+# by adding them to the dict
+#   Parameter: Parameter value
+#
+#######################################################################
 ---
 - hosts: all
   become: true
