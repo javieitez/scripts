@@ -1,0 +1,233 @@
+###############################################################
+# A basic set of security restrictions to
+# secure a legacy server
+###############################################################
+
+
+---
+- hosts: all
+  become: true
+  handlers:
+  - import_tasks: handlers/sec1/main.yml
+
+  tasks:
+
+  - name: dirs present
+    file:
+      path: "{{ item }}"
+      state: directory
+      mode: '0644'
+    with_list:
+      - /etc/security/pwquality.conf.d
+      - /etc/audit/rules.d
+
+  - name: files present
+    file:
+      path: "{{ item }}"
+      state: touch
+      mode: '0644'
+      modification_time: preserve
+      access_time: preserve
+    with_list:
+      - /etc/motd
+      - /etc/audit/audit.rules
+
+  - name: Debian dependencies
+    apt:
+      name: "{{ item.key }}"
+      state: "{{ item.value }}"
+      update_cache: true
+    when: ansible_os_family == "Debian"
+    with_dict:
+      libpam-passwdqc: present
+      libpam-cracklib: absent
+      auditd: present
+
+  - name: myaudit.rules
+    copy:
+      src: files/sec1/myaudit.rules
+      dest: /etc/audit/rules.d/myaudit.rules
+      owner: root
+      group: root
+      mode: '0644'
+    when: ansible_machine == "x86_64"
+    notify: "Reload auditd"
+
+  - name: Upload conf files
+    copy:
+      src: "{{ item.key }}"
+      dest: "{{ item.value }}"
+      owner: root
+      group: root
+      mode: '0644'
+    notify: "Reload sysctl rules"
+    with_dict:
+      files/sec1/sysctl-my.conf: /etc/sysctl.d/my-compliance.conf
+      files/sec1/pwquality.conf: /etc/security/pwquality.conf.d/my-compliance.conf
+
+  - name: rsyslog must be enabled and running
+    systemd:
+      name: rsyslog
+      state: started
+      enabled: true
+
+  - name: Find logs created within the last 120 minutes
+    find:
+      paths: /var/log
+      pattern: '*.log'
+      age: -120m
+    register: log_output
+    failed_when: log_output.matched == 0
+    ignore_errors: true
+
+  - name: Set ip sysctl params
+    ansible.posix.sysctl:
+      name: "{{ item.key }}"
+      value: "{{ item.value }}"
+      sysctl_set: true
+      state: present
+      reload: true
+    with_dict:
+      net.ipv4.route.flush: '1'
+      net.ipv4.ip_forward: '0'
+
+  - name: Remove Deprecated services
+    include_role:
+      name: sec1-deprecatedstuff
+
+  - name: OS File Permissions
+    include_role:
+      name: sec1-filepermissions
+
+  - name: Copy banner files
+    copy:
+      src: files/sec1/issue
+      dest: "{{ item }}"
+      owner: root
+      group: root
+      mode: '0644'
+    notify: Reload sshd
+    with_list:
+      - /etc/issue
+      - /etc/issue.net
+
+  - name: Edit sshd_config
+    lineinfile:
+      firstmatch: True
+      path: /etc/ssh/sshd_config
+      search_string: "{{ item.key }}"
+      line: "{{ item.value }}"
+    notify: Reload sshd
+    with_dict:
+      IgnoreRhosts: IgnoreRhosts yes
+      Protocol: Protocol 2
+      PermitEmptyPasswords: PermitEmptyPasswords no
+      "MACs ": MACs hmac-sha2-512-etm@openssh.com,hmac-sha2-256-etm@openssh.com,hmac-sha2-512,hmac-sha2-256
+      KexAlgorithms: KexAlgorithms curve25519-sha256,curve25519-sha256@libssh.org,diffie-hellman-group14-sha256,diffie-hellman-group16-sha512,diffie-hellman-group18-sha512,ecdh-sha2-nistp521,ecdh-sha2-nistp384,ecdh-sha2-nistp256,diffie-hellman-group-exchange-sha256
+      LoginGraceTime: LoginGraceTime 60
+      Banner: Banner /etc/issue.net
+      AllowTcpForwarding: AllowTcpForwarding no
+      PermitRootLogin: PermitRootLogin no
+
+  - name: Remove deprecated my_compliance.conf
+    file:
+      path: /etc/ssh/sshd_config.d/my_compliance.conf
+      state: absent
+
+  - name: Retrieve list of SSH private keys
+    shell: find /etc/ssh -xdev -type f -name 'ssh_host_*_key'
+    register: sshkeysfound
+    changed_when: false
+
+  - name: Review security on SSH private keys
+    file:
+      path: "{{ item }}"
+      owner: root
+      group: root
+      mode: '0600'
+    with_items:
+      - "{{ sshkeysfound.stdout_lines }} "
+
+  - name: Retrieve list of SSH public keys
+    shell: find /etc/ssh -xdev -type f -name 'ssh_host_*_key.pub'
+    register: sshkeysfound
+    changed_when: false
+
+  - name: Review security on SSH public keys
+    file:
+      path: "{{ item }}"
+      owner: root
+      group: root
+      mode: '0644'
+    with_items:
+      - "{{ sshkeysfound.stdout_lines }} "
+
+  - name: login and logout events are collected
+    lineinfile:
+      path: /etc/audit/audit.rules
+      line: "{{ item }}"
+    with_list:
+      - -w /var/log/lastlog -p wa -k logins
+      - -w /var/run/faillock/ -p wa -k logins
+    ignore_errors: true
+
+  - name: Find potentiallly insecure files in all home folders
+    find:
+      paths: /home/
+      patterns: '.rhosts,.forward,.netrc'
+      recurse: yes
+      hidden: true
+    register: filesfound
+    changed_when: filesfound.matched != 0
+    notify: Delete potentiallly insecure files found in all home folders
+
+  - name: proper root settings in /etc/passwd
+    lineinfile:
+      firstmatch: True
+      path: /etc/passwd
+      search_string: root:x:0:0
+      line: root:x:0:0:root:/root:/bin/bash
+
+  - name: Search for id 0 on /etc/passwd (root escalation)
+    shell: "sudo awk -F: '($3 == 0) { print $1 }' /etc/passwd"
+    register: myoutput
+    changed_when: false
+    failed_when: myoutput.stdout != "root"
+
+  - name: Accounts with empty password
+    shell: >
+      awk -F: '($2 == "" ) { print $1 " does not have a password "}' /etc/shadow
+    register: myoutput
+    changed_when: false
+    failed_when: myoutput.stdout != ""
+
+
+  - name: proper settings in /etc/pam.d/su
+    lineinfile:
+      firstmatch: True
+      path: /etc/pam.d/su
+      search_string: pam_wheel.so use_uid
+      line: auth            required        pam_wheel.so use_uid
+
+  - name: Password complexity policies (Redhat)
+    lineinfile:
+      path: /etc/pam.d/system-auth
+      search_string: "{{ item.key }}"
+      state: present
+      line: "{{ item.value }}"
+    when: ansible_os_family == "RedHat" or ansible_os_family == "Rocky"
+    with_dict:
+      - 'pam_cracklib.so': 'password    required                                     pam_cracklib.so try_first_pass retry=3 minlen=14 dcredit=-1 ucredit=-1 ocredit=-1 lcredit=-1'
+      - 'pam_pwquality.so try_first_pass': 'password    requisite                                    pam_pwquality.so try_first_pass retry=3'
+
+  - name: Check if /tmp was already configured
+    lineinfile:
+      path: /etc/fstab
+      search_string: "{{ item.key }}"
+      state: present
+      line: "{{ item.value }}"
+      backup: true
+    with_dict:
+      - 'sec1 requires /tmp to be mounted to tmpfs': '### sec1 requires /tmp to be mounted to tmpfs'
+      - 'tmpfs /tmp tmpfs defaults': tmpfs /tmp tmpfs defaults,rw,nosuid,nodev,noexec,relatime 0 0
+    notify: Delete everything under /tmp

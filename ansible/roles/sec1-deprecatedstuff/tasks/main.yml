@@ -1,0 +1,22 @@
+######################################################################################
+# SAB1 Deprecated services   #
+######################################################################################
+
+  - name: Get the list of services
+    service_facts:
+
+  - name: deprecated services  
+    systemd:
+      name: "{{ item }}"
+      state: stopped
+      enabled: false
+    when:  item in services
+    with_list:
+      - daytime.service
+      - chargen.service
+      - discard.service
+      - echo.service
+      - tftp.service
+      - talk.service
+      - telnet.service
+

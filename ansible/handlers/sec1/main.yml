@@ -1,0 +1,39 @@
+######################################################################################
+# SAB1  Handlers#
+######################################################################################
+
+- name: Reload augenrules
+  # auditd cannot be restarted by systemd
+  command: augenrules --load
+  listen: "Reload auditd"
+
+- name: service auditd restart
+  command: service auditd restart
+  listen: "Reload auditd"
+
+- name: Make sure auditd is started
+  systemd: 
+    name: auditd
+    state: started
+  listen: "Reload auditd"
+
+- name: Reload sysctl rules
+  command: sysctl --system
+
+- name: Reload sshd
+  systemd: 
+    name: sshd
+    state: reloaded
+
+- name: Delete potentiallly insecure files found in all home folders
+  file:
+    path: "{{ item.path }}"
+    state: absent
+  with_items: "{{ filesfound.files }}"
+
+- name: Delete everything under /tmp
+  shell: rm -rf /tmp/*
+  notify: Remount /etc/fstab
+
+- name: Remount /etc/fstab
+  shell: mount -a
