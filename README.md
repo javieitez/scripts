@@ -8,3 +8,5 @@ Most of them are quick and dirty solutions to everyday problems
  * __fetchlicenses.sh__: retrieves an integer from an XML based webservice, returns OK or ERROR based on a given threshold
  * __fetchremotelogs.sh__: retrieves a series of log files from each server on a cluster, and counts the repetitions of a given string in them
  * __simpleSQLbackup.sh__: A simple backup script that can be scheduled to make a backup of an existing DB and a series of files, and then upload them to a remote place
+
+Also, check the **ansible** folder ;)
