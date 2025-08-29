@@ -1,0 +1,66 @@
+---
+- hosts: My_Proxmox_Cluster
+  gather_facts: false
+  become: true
+
+  tasks:
+    - name: Mandatory packages
+      apt:
+        name: "{{ item }}" 
+        state: present
+        update_cache: false
+      with_list:
+        - lvm2-lockd 
+        - multipath-tools
+
+    - name: copy config files
+      copy:
+        src: 'files/{{ item }}.conf'
+        dest: '/etc/{{ item }}/{{ item }}.conf'
+        mode: 0644
+        owner: root
+      loop:
+        - lvm
+        - dlm
+
+    - name: Systemd - PVE Services Enabled and Running
+      service:
+        name: "{{ item }}"
+        state: started
+        enabled: true
+      with_list:
+        - pve-ha-crm.service
+        - pve-cluster.service
+        - pveproxy.service
+        - pvedaemon.service
+        - pve-lxc-syscalld.service
+        - pvenetcommit.service
+        - pvebanner.service
+        - pve-ha-lrm.service
+        - pvefw-logger.service
+        - pvescheduler.service
+        - pve-firewall.service
+        - pve-guests.service
+        - pvestatd.service
+
+    - name: Systemd - PVE Storage Target
+      service: 
+        name: pve-storage.target
+        state: started
+
+    - name: Systemd - Multipath and cluster services
+      service: 
+        name: "{{ item }}"
+        state: started
+        enabled: true
+      ignore_errors: true
+      with_list:
+        - multipathd.service
+        - multipath-tools.service
+        - lvmlockd.service 
+        - corosync.service 
+
+    - name: remove the old custom script
+      file:
+        path: /usr/sbin/initlock.sh
+        state: absent

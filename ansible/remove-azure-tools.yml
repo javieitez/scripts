@@ -1,0 +1,89 @@
+########################################################################################################
+#     Remove Azure Tools
+#  author: JA Vieitez
+#  status: production
+#
+#  Removes all the Azure specifics. For VMs imported from Azure and supposed to run on VMWare or KVM. 
+########################################################################################################
+---
+- hosts: all
+  become: true
+  handlers:
+    - import_tasks: handlers/sab1/main.yml
+
+  tasks:
+    - name: Edit /etc/fstab
+      lineinfile: 
+        firstmatch: True
+        path: /etc/fstab
+        search_string: "/dev/disk/cloud/azure_resource"
+        state: absent
+      notify: Remount /etc/fstab
+
+    - name: Edit GRUB
+      lineinfile:
+        firstmatch: True
+        path: /etc/default/grub
+        regexp: "{{ item.key }}"
+        line: "{{ item.value }}"
+      with_dict: 
+        - '^GRUB_TIMEOUT_STYLE=': 'GRUB_TIMEOUT_STYLE=menu'
+        - '^GRUB_CMDLINE_LINUX_DEFAULT=': 'GRUB_CMDLINE_LINUX_DEFAULT=""'
+      notify: update-grub
+  
+    - name: Remove init scripts
+      file:
+        path: "/etc/init/{{ item }}"
+        state: absent
+      loop:
+        - ephemeral-disk-warning.conf
+        - hv-fcopy-daemon.conf
+        - hv-kvp-daemon.conf  
+        - hv-vss-daemon.conf
+        - walinuxagent.conf
+
+    - name: Disable HyperV services
+      service:
+        name: hv-kvp-daemon
+        state: stopped
+        enabled: no
+
+    - name: Remove config files
+      file: 
+        path: /etc/default/grub.d/50-cloudimg-settings.cfg
+        state: absent
+
+    - name: Remove walinuxagent
+      package:
+        name: walinuxagent
+        state: absent
+
+    - name: Remove all Azure Kernel packages
+      ansible.builtin.apt:
+        name: "{{ item }}"
+        state: absent
+      loop:
+        - linux-image-azure
+        - linux-headers-azure
+        - linux-tools-azure
+        - linux-cloud-tools-azure
+        #- linux-image-*-*-azure # if this one crashes. Remove manually and update-grub
+        - linux-cloud-tools-*-azure
+        - linux-headers-*-azure
+        - linux-tools-*-azure
+        - linux-azure-cloud-tools-*
+        - linux-azure-headers-*
+        - linux-azure-tools-*
+        #- linux-modules-*-azure
+      notify: update-grub
+      
+    - name: install standard distro kernel
+      package:
+        name: linux-image-generic
+        state: present
+      notify: update-grub
+
+    - name: Remove no longer required dependencies
+      apt:
+        autoremove: yes
+      notify: update-grub

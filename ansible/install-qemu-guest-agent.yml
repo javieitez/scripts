@@ -1,0 +1,27 @@
+########################################################################################################
+#     Install Qemu Guest Agent
+#  author: JA Vieitez
+#  status: production
+#   
+########################################################################################################
+---
+- hosts: all
+  gather_facts: yes
+  become: true
+
+  tasks:
+  - name: Install Qemu Guest Agent
+    package:
+      name: "qemu-guest-agent" 
+      state: latest
+
+  - name: Remove open-vm-tools
+    package:
+      name: "open-vm-tools" 
+      state: absent
+
+  - name: SystemD service enabled and running
+    service:
+      name: qemu-guest-agent.service
+      state: started
+      enabled: true

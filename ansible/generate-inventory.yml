@@ -15,10 +15,10 @@
   tasks:
     - name: remove local file
       file:
-        path: "{{ my_filerepo_local }}{{local_inventory_file}}"
+        path: "{{ my_filerepo_local }}{{local_inventory_file}}"        
         state: absent
       delegate_to: localhost
-      run_once: true
+      run_once: true        
 
     - name: write facts to local file
       blockinfile:
@@ -29,19 +29,20 @@
           <h4>{{ ansible_host }} </h4>
           <p>
           <ul>
-          <li>Real Hostname: <b> {{ ansible_hostname }} </b>
-          <li>Managed by: <b> {{ my_manager }} </b>
-          <li>OS: <b>{{ ansible_distribution }} {{ ansible_distribution_version }} - {{ ansible_distribution_release }} </b></li>
-          <li>OS Family: <b>{{  ansible_os_family }}</b></li>
-          <li>arch: <b>{{ ansible_architecture }} </b></li>
-          <li>vCPUs: <b>{{ ansible_processor_count }}</b></li>
+          <li>Real Hostname: <b> {{ ansible_facts.hostname }} </b></li>
+          <li>FQDN: <b>{{ ansible_facts.fqdn }}</b></li>
+          <li>Managed by: <b> {{ my_manager }} </b></li>
+          <li>OS: <b>{{ ansible_facts.distribution }} {{ ansible_facts.distribution_version }} - {{ ansible_facts.distribution_release }} </b></li>
+          <li>OS Family: <b>{{  ansible_facts.os_family }}</b></li>
+          <li>arch: <b>{{ ansible_facts.architecture }} </b></li>
+          <li>vCPUs: <b>{{ ansible_facts.processor_count }}</b></li>
           <li>part of: <b>{{ group_names|join(',') }}</b></li>
-          <li>Domain: <b>{{ ansible_domain }}</b></li>
-          <li>Memory: <b>{{ (ansible_memtotal_mb * 1000000) |filesizeformat }}</b></li>
-          <li>Swap: <b>{{ (ansible_memory_mb.swap.total * 1000000) |filesizeformat }} </b></li>
-          <li>Uptime: <b>{{ now().replace(microsecond=0) - now().fromtimestamp(now(fmt='%s') | int - ansible_uptime_seconds) }}</b></li>
-          <li>SELinux: <b>{{ ansible_selinux.status }}</b></li>
-          <li>Service Manager: <b>{{ ansible_service_mgr }}</b></li>
+          <li>Domain: <b>{{ ansible_facts.domain }}</b></li>
+          <li>Memory: <b>{{ (ansible_facts.memtotal_mb * 1000000) |filesizeformat }}</b></li>
+          <li>Swap: <b>{{ (ansible_facts.memory_mb.swap.total * 1000000) |filesizeformat }} </b></li>
+          <li>Uptime: <b>{{ now().replace(microsecond=0) - now().fromtimestamp(now(fmt='%s') | int - ansible_facts.uptime_seconds) }}</b></li>
+          <li>SELinux: <b>{{ ansible_facts.selinux.status }}</b></li>
+          <li>Service Manager: <b>{{ ansible_facts.service_mgr }}</b></li>
           <li>Cloud: <b>{{ my_cloud }}</b></li>
           </ul>
           </p></div>
@@ -52,14 +53,14 @@
     - name: flush local cache
       shell: sync
       delegate_to: localhost
-      run_once: true
+      run_once: true        
 
     - name: Write disk size to local file
       lineinfile:
         path: "{{ my_filerepo_local }}{{local_inventory_file}}"
         line: "<!-- DEBUG {{ inventory_hostname }}--><b>{{ item }}</b> {{ ansible_devices[item].size }}<br>"
         #create: true
-        insertafter: "<!-- END {{ inventory_hostname }} -->"
+        insertbefore: "<!-- END {{ inventory_hostname }} -->"
       loop: "{{ ansible_devices.keys()|list }}"
       when: item | regex_search("(sd[a-z]|nvme[0-99]n[0-99]|xvd[a-z])")
       changed_when: True #always write
@@ -72,13 +73,13 @@
           <!DOCTYPE html>
           <html>
           <head>
-          <title>my Inventory</title>
+          <title>My Inventory</title>
           </head>
           <body>
         insertbefore: BOF
         marker: "<!-- {mark} Auto header -->"
       delegate_to: localhost
-      run_once: true
+      run_once: true        
 
 
     - name: Close HTML
@@ -92,7 +93,7 @@
           </html>
         insertafter: EOF
         marker: "<!-- {mark} Auto Footer -->"
-      delegate_to: localhost
+      delegate_to: localhost        
       run_once: true
 
 #    - name: Full output

@@ -1,0 +1,98 @@
+---
+- hosts: all
+  gather_facts: yes
+  become: true
+
+  handlers:
+  - name: Reload firewalld
+    systemd: 
+      name: firewalld
+      state: reloaded
+
+################################################################################################
+# Same as install_checkmk.yml but uploading the file, instead of fetching it from http
+#
+# Useful for VMs that don't have access to our private network
+################################################################################################
+
+  tasks:
+
+  - name: Collect facts about system services
+    service_facts:
+    register: services_state
+
+  - name: Upload Package
+    copy:
+      src: "{{ my_filerepo_local }}{{ item }}"
+      dest: "/tmp/"
+    with_list:
+      - /checkmk/linux/check-mk-agent-latest.deb
+      - /checkmk/linux/check-mk-agent-latest.rpm
+
+
+  - name: Install checkmk (RPM)
+    yum:
+      name: "/tmp/check-mk-agent-latest.rpm" 
+      state: present
+      disable_gpg_check: true
+    # Only apply if Redhat > 7, to prevent RHEL yum bug 
+    when: (ansible_pkg_mgr == "yum" or ansible_pkg_mgr == "dnf")  and (ansible_distribution_major_version |int > 6)
+
+  - name: Install checkmk (DEB)
+    apt:
+      deb: "/tmp/check-mk-agent-latest.deb"
+      state: present
+      update_cache: false
+    when: ansible_pkg_mgr == "apt"
+
+  - name: Plugins dir exists
+    file: 
+      path: /usr/lib/check_mk_agent/plugins
+      state: directory
+      owner: root
+      group: root
+      mode: '0755'
+
+
+  - name: Copy Inventory plugin
+    copy:
+      src: "{{my_filerepo_local}}/checkmk/linux/plugins/mk_inventory.linux"
+      dest: /usr/lib/check_mk_agent/plugins/mk_inventory.linux
+      owner: root
+      group: root
+      mode: '0754'
+
+
+#################################################################################################
+#  Only make changes to the firewall *IF* firewalld is already enabled and running
+#################################################################################################
+
+  - name: Port 6556/tcp to trusted zone
+    ansible.posix.firewalld:
+      zone: trusted
+      port: 6556/tcp
+      permanent: true
+      state: enabled
+    when: services_state.ansible_facts.services['firewalld.service'].status is defined and services_state.ansible_facts.services['firewalld.service'].status == 'enabled'
+    notify: Reload firewalld
+
+  - name: Port 6556/tcp to public zone
+    ansible.posix.firewalld:
+      zone: public
+      port: 6556/tcp
+      permanent: true
+      state: enabled
+    when: services_state.ansible_facts.services['firewalld.service'].status is defined and services_state.ansible_facts.services['firewalld.service'].status == 'enabled'
+    notify: Reload firewalld
+
+  - name: Flush handlers
+    meta: flush_handlers
+
+  - name: Check port 6556 on localhost 
+    wait_for:
+      host: localhost
+      port: 6556
+      state: started         # Port should be open
+      delay: 0               # No wait before first check (sec)
+      timeout: 3             # Stop checking after timeout (sec)
+    ignore_errors: yes

@@ -1,0 +1,14 @@
+---
+- hosts: all
+  gather_facts: no
+  become: false
+
+  tasks:
+  - name: Check port 80 on "{{ my_ansible }}" 
+    wait_for:
+      host: "{{ my_ansible }}"
+      port: 80
+      state: started         # Port should be reachable
+      delay: 0               # No wait before first check (sec)
+      timeout: 3             # Stop checking after timeout (sec)
+    ignore_errors: no

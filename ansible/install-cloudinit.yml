@@ -1,0 +1,18 @@
+########################################################################################################
+#     Configure cloud-init
+#  author: JA Vieitez
+#  status: production
+########################################################################################################
+---
+- name: prepare a Debian host for cloud-init
+  hosts: all
+  become: true
+
+  tasks:
+    - name: Install missing DEB packages
+      apt: 
+        name: "{{ item }}"  
+        state: latest
+        update_cache: true
+      loop:
+        - cloud-init

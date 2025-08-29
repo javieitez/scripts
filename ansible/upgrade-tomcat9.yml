@@ -1,0 +1,124 @@
+########################################################################################################
+#  author: JA Vieitez
+#  status: PROD
+#
+#   For Tomcat9x servers. Install new version. Rebuild Permissions and app structure.
+#
+#   Quick instructions: 
+#    * check the latest version at https://tomcat.apache.org/download-90.cgi
+#    * if there's a newer version, change the value of latest_tomcat and run this playbook
+#
+########################################################################################################
+---
+- name: Common Configuration
+  hosts: Altamira
+  gather_facts: false
+  vars:
+    - latest_tomcat: "9.0.100"
+    - tomcat_URL: "https://dlcdn.apache.org/tomcat/tomcat-9/v{{ latest_tomcat }}/bin/apache-tomcat-{{ latest_tomcat }}.tar.gz"
+    - tomcat_dir: "/opt/apache-tomcat-{{ latest_tomcat }}"
+    - tomcat_user: "tomcat"
+  become: true
+
+  handlers:
+    - name: Download and extract the latest tar file
+      unarchive:
+        src: "{{ tomcat_URL }}"
+        dest: /opt/
+        remote_src: true
+      listen: Rebuild Tomcat
+
+    - name: remove webapps dir
+      file:
+        path: "{{ tomcat_dir }}/webapps"
+        state: absent
+      listen: Rebuild Tomcat
+
+    - name: create webapps symlink
+      file:
+        src: /opt/tomcat_webapps
+        dest: "{{ tomcat_dir }}/webapps"
+        owner: "{{ tomcat_user }}"
+        group: "{{ tomcat_user }}"
+        state: link
+      listen: Rebuild Tomcat
+
+    - name: create conf subdirs with mode 0750
+      file: 
+        path: "{{ tomcat_dir }}/{{ item }}"
+        state: directory
+        mode: 0750
+        owner: "{{ tomcat_user }}"
+        group: "{{ tomcat_user }}"
+      loop:
+        - conf
+        - conf/Catalina/localhost
+      listen: Rebuild Tomcat
+
+    - name: Recursively change ownership of "{{ tomcat_dir }}" 
+      ansible.builtin.file:
+        path: "{{ tomcat_dir }}"
+        state: directory
+        recurse: yes
+        owner: "{{ tomcat_user }}"
+        group: "{{ tomcat_user }}"
+      listen: Rebuild Tomcat
+
+    - name: Copy conf files
+      copy:
+        src: "{{ item.key }}"
+        dest: "{{ item.value }}"
+        owner: root
+        group: tomcat
+        mode: 0644
+      with_dict:
+        files/altamira/server.xml: "{{ tomcat_dir }}/conf/server.xml"
+        files/altamira/rewrite.config: "{{ tomcat_dir }}/conf/Catalina/localhost/rewrite.config"
+        files/altamira/rules.txt: "{{ tomcat_dir }}/rules/"
+      listen: Rebuild Tomcat
+
+    - name: touch log file
+      file:
+        path: "{{ tomcat_dir }}/logs/catalina.out"
+        state: touch
+        owner: "{{ tomcat_user }}"
+        group: "{{ tomcat_user }}"
+        mode: 0644
+      listen: Rebuild Tomcat
+
+    - name: Restart Tomcat
+      service: 
+        name: tomcat
+        state: restarted
+
+  tasks:
+    - name: Tomcat user exists
+      user:
+        name: "{{ tomcat_user }}"
+        uid: 1001
+        group: "{{ tomcat_user }}"
+        create_home: false
+
+    - name: Tomcat group exists
+      group:
+        name: "{{ tomcat_user }}"
+        gid: 1001
+
+    - name: Dir with latest version exists
+      file:
+        path: "{{ tomcat_dir }}"
+        state: directory
+        owner: root
+        group: tomcat
+      notify: Rebuild Tomcat
+
+    - meta: flush_handlers
+
+    - name: Symlink points to the latest version
+      ansible.builtin.file:
+        src: "{{ tomcat_dir }}"
+        dest: /opt/tomcat
+        owner: root
+        group: tomcat
+        state: link
+      notify: Restart Tomcat

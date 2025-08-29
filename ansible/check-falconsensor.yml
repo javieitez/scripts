@@ -1,0 +1,11 @@
+---
+- hosts: all, !no_falcon_sensor
+  become: true
+  gather_facts: false
+
+  tasks:
+    - name: Falcon Sensor Service up and running
+      service:
+        name: falcon-sensor
+        state: started
+        enabled: true

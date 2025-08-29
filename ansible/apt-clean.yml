@@ -1,0 +1,27 @@
+########################################################################################################
+#  author: JA Vieitez
+#  status: PROD
+#
+# apt autoclean + clear cache  
+# running it periodically on all servers significantly reduces the backup size 
+########################################################################################################
+---
+- hosts: all
+  become: true
+  gather_facts: true 
+  tasks:
+
+  - name: "autoclean and autoremove"
+    apt: 
+      update_cache: false 
+      autoremove: true
+      #purge: true
+      autoclean: true
+      clean: true
+    register: apt_output
+    when: ansible_pkg_mgr == "apt" 
+
+  - name: Print Output
+    debug: 
+      msg: "{{ apt_output.stdout_lines | default('Nothing...') }}"
+    when: ansible_pkg_mgr == "apt" 

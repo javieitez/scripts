@@ -1,0 +1,24 @@
+########################################################################################################
+#     VM Template Init
+#  author: JA Vieitez
+#  status: production
+#
+#   Remove any traces left of Foreman / Katello installation
+#
+########################################################################################################---
+
+---
+- hosts: all
+  become: true
+  gather_facts: false
+
+  tasks:
+    - name: Remove lines from /etc/hosts
+      lineinfile:
+        path: /etc/hosts
+        search_string: "{{ item }}"
+        state: absent
+      loop:
+        - required for Katello
+        - my-foreman.my-domain.local
+        

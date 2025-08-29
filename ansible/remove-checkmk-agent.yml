@@ -1,0 +1,14 @@
+########################################################################################################
+#     Remove CheckMK agent
+#  author: JA Vieitez
+#  status: production
+#
+########################################################################################################
+---
+- hosts: all
+  become: true
+  tasks:
+    - name: Remove CheckMK agent
+      package:
+        name: check-mk-agent
+        state: absent

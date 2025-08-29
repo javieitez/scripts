@@ -1,0 +1,51 @@
+########################################################################################################
+#     VM Template Init
+#  author: JA Vieitez
+#  status: production
+#
+#   Sets defaults to a VM made from a template or from scratch 
+#
+########################################################################################################---
+- hosts: all
+  become: true
+
+  vars:
+    GITAM_barcode: "5577_7420_343361"
+
+  tasks:  
+    - name: Upload default GITAM Barcode 
+      copy:
+        src: /var/www/html/gitam_barcodes/{{ GITAM_barcode }}.gitam
+        dest: /var/opt/{{ GITAM_barcode }}.gitam
+        owner: root
+        group: root
+        mode: '0644'
+
+    - name: Install missing DEB packages
+      apt: 
+        name: "{{ item.key }}"  
+        state: "{{ item.value }}"
+        update_cache: true
+      when: ansible_os_family == "Debian"
+      with_dict:
+        libpam-pwquality: present
+        rsyslog: present
+
+    - name: Install QEMU guest agent and cloud-init
+      package: 
+        name: "{{ item.key }}"  
+        state: "{{ item.value }}"
+      when: my_cloud == "Proxmox VE"
+      with_dict:
+        - qemu-guest-agent: present
+        - cloud-init: present
+        - open-vm-tools: absent
+
+    - name: Install open VM tools
+      package: 
+        name: "{{ item.key }}"  
+        state: "{{ item.value }}"
+      when: my_cloud == "VMWare"
+      with_dict:
+        - qemu-guest-agent: absent
+        - open-vm-tools: present

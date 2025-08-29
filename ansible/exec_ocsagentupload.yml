@@ -1,0 +1,52 @@
+########################################################################################################
+#     Install OCS Agent
+#  author: JA Vieitez
+#  status: production
+#
+#  Run external command and send the latest inventory to the OCS server 
+#
+########################################################################################################
+---
+- hosts: all
+  gather_facts: yes
+  become: true
+
+  vars:
+    my_ocsinventoryserver: "10.x.x.x"
+
+  tasks:
+  - name: SystemD service enabled and running
+    service:
+      name: ocsinventory-agent.service
+      state: started
+      enabled: true
+    when: ansible_service_mgr == "systemd"
+
+  - name: SystemD Timer enabled and running (RHEL)
+    service:
+      name: ocsinventory-agent-daily.timer
+      state: started
+      enabled: true
+    when: ansible_os_family == "RedHat" or ansible_os_family == "Rocky"
+
+  - name: SystemD Timer enabled and running (Debian)
+    service:
+      name: ocsinventory-agent.timer
+      state: started
+      enabled: true
+    when: ansible_os_family == "Debian" or ansible_os_family == "Suse"
+
+  - name: Access to OCS server from the current host
+    wait_for:
+      host: "{{ my_ocsinventoryserver }}"
+      port: "{{ item }}"
+      state: started         # Port should be open
+      delay: 0               # No wait before first check (sec)
+      timeout: 3             # Stop checking after timeout (sec)
+    ignore_errors: yes
+    with_list:
+      - 80
+      #- 443
+
+  - name: Send inventory to OCS Server
+    shell: ocsinventory-agent

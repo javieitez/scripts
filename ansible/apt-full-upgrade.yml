@@ -1,0 +1,23 @@
+########################################################################################################
+#  author: JA Vieitez 
+#  status: PROD
+#
+#   Run DEBIAN/UBUNTU only  - Equivalent to apt update && apt full-upgrade
+########################################################################################################
+---
+- hosts: all
+  become: true
+  gather_facts: false 
+  tasks:
+
+  - name: "Update apt cache"
+    apt: update_cache=yes force_apt_get=yes cache_valid_time=3600
+    
+     
+  - name: "apt upgrade (Debian)"
+    apt: force_apt_get=yes autoremove=yes upgrade=full cache_valid_time=3600
+    register : apt_output
+
+  - name: Print Output
+    debug: 
+      msg: "{{ apt_output.stdout_lines | default('Nothing...') }}"

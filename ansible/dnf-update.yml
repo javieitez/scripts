@@ -1,0 +1,18 @@
+---
+- hosts: all
+  become: yes
+  tasks:
+
+  - name: dnf upgrade (RHEL)
+    yum:
+      name: '*'
+      state: latest
+    register : yum_output
+    when: ansible_pkg_mgr == "yum" or ansible_pkg_mgr == "dnf"
+
+  - name: Print Output
+    debug: 
+      msg: 
+        - "{{ yum_output.msg | default('...') }}"
+        - "{{ yum_output.results }}"
+    when: ansible_pkg_mgr == "yum" or ansible_pkg_mgr == "dnf"

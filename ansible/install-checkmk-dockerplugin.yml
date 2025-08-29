@@ -1,0 +1,37 @@
+---
+- hosts: all
+  gather_facts: yes
+  become: true
+
+  tasks:
+  - name: Install python3-docker
+    apt:
+      name: python3-docker
+      state: present
+      update_cache: false
+    when: ansible_pkg_mgr == "apt"
+
+  - name: Plugins dir exists
+    file: 
+      path: /usr/lib/check_mk_agent/plugins
+      state: directory
+      owner: root
+      group: root
+      mode: '0755'
+
+  - name: Copy Inventory plugin
+    copy:
+      src: "{{my_filerepo_local}}/checkmk/linux/plugins/mk_docker.py"
+      dest: /usr/lib/check_mk_agent/plugins/mk_docker.py
+      owner: root
+      group: root
+      mode: '0755'
+
+  - name: Copy docker.cfg
+    copy:
+      src: "{{my_filerepo_local}}/checkmk/linux/plugins/docker.cfg"
+      dest: /etc/check_mk/docker.cfg
+      owner: root
+      group: root
+      mode: '0755'
+

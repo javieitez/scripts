@@ -1,0 +1,14 @@
+---
+- hosts: all
+  become: true
+
+  tasks:
+  - name: Edit .bashrc
+    lineinfile:
+      path: "{{ item }}.bashrc"
+      regexp: '^alias\ ll\='
+      line: alias ll='ls $LS_OPTIONS -lha --color'
+    when: ansible_os_family == "Debian"
+    with_list:
+      - /root/
+      - /home/adges00/
